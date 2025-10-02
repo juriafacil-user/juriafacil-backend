@@ -1,11 +1,11 @@
 from fastapi import FastAPI
 from app.routes import users
 
-app = FastAPI(title="JuriFacil API")
+app = FastAPI(title="API JuriFacil 🚀")
 
-# Rotas
-app.include_router(users.router, prefix="/users", tags=["Users"])
+# Registrar rotas
+app.include_router(users.router)
 
 @app.get("/")
 def root():
-    return {"message": "API JuriaFacil funcionando 🚀"}
+    return {"message": "API JuriFacil funcionando 🚀"}
