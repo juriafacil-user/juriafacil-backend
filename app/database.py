@@ -3,5 +3,5 @@ import os
 
 MONGODB_URI = os.getenv("MONGODB_URI")
 
-client = AsyncIOMotorClient(MONGO_URI)
+client = AsyncIOMotorClient(MONGODB_URI)
 db = client["juriafacil"]  # nome do banco
