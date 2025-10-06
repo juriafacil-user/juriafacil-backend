@@ -6,3 +6,5 @@ pymongo
 python-dotenv
 email-validator
 requests
+passlib[bcrypt]
+python-jose[cryptography]
