@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from datetime import datetime, timedelta
 from app.utils.database import db
 from app.utils.user_helper import get_current_user
+import mercadopago
+import os
 
 router = APIRouter(prefix="/billing", tags=["Billing"])
 
@@ -45,3 +47,30 @@ async def upgrade_to_premium(user: dict = Depends(get_current_user)):
         "message": "Plano Premium ativado com sucesso!",
         "expires_in": new_expiration
     }
+
+
+# Isso gera o link automático de pagamento da assinatura.
+sdk = mercadopago.SDK(os.getenv("MERCADOPAGO_ACCESS_TOKEN"))
+@router.post("/create-subscription")
+async def create_subscription(user: dict = Depends(get_current_user)):
+    preference_data = {
+        "items": [
+            {
+                "title": "Assinatura JuriFácil Premium",
+                "quantity": 1,
+                "unit_price": 29.90
+            }
+        ],
+        "payer": {
+            "email": user["email"]
+        },
+        "back_urls": {
+            "success": "https://juriafacil.com/sucesso",
+            "failure": "https://juriafacil.com/erro",
+            "pending": "https://juriafacil.com/pendente"
+        },
+        "auto_return": "approved"
+    }
+
+    preference_response = sdk.preference().create(preference_data)
+    return {"init_point": preference_response["response"]["init_point"]}
