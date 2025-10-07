@@ -1,30 +1,44 @@
-from fastapi import APIRouter, HTTPException, Depends
-from app.database import db
+from fastapi import APIRouter, HTTPException, status, Depends
+from app.utils.database import db
 from app.routes.auth import get_password_hash, get_current_user
 from app.schemas import UserCreate
-
-router = APIRouter()
-
-@router.get("/users/")
-async def list_users():
-    return {"message": "Endpoint de usuários ativo ✅"}
+from app.models import user_entity, users_entity, UserModel
+from bson import ObjectId
 
 
-@router.post("/users/")
-async def create_user(user: UserCreate):
-    existing_user = await db["users"].find_one({"email": user.email})
+router = APIRouter(prefix="/users", tags=["Users"])
+
+# 🟩 Listar todos os usuários
+@router.get("/")
+async def get_users():
+    users = await db.users.find().to_list(100)
+    return {"users": users_entity(users)}
+
+# 🟦 Criar novo usuário
+@router.post("/", status_code=status.HTTP_201_CREATED)
+async def create_user(user: UserModel):
+    # Verifica se já existe usuário com o mesmo e-mail
+    existing_user = await db.users.find_one({"email": user.email})
     if existing_user:
         raise HTTPException(status_code=400, detail="E-mail já cadastrado")
 
-    hashed_password = get_password_hash(user.password)
-    new_user = {
-        "name": user.name,
-        "email": user.email,
-        "password": hashed_password
-    }
+    new_user = user.dict()
+    new_user["plan"] = "free"
+    new_user["upload_count"] = 0
+    new_user["last_upload"] = None
+    new_user["plan_expiration"] = None
 
-    await db["users"].insert_one(new_user)
-    return {"message": "Usuário criado com sucesso!"}
+    result = await db.users.insert_one(new_user)
+    created_user = await db.users.find_one({"_id": result.inserted_id})
+    return {"user": user_entity(created_user)}
+
+# 🟨 Buscar um usuário específico
+@router.get("/{id}")
+async def get_user(id: str):
+    user = await db.users.find_one({"_id": ObjectId(id)})
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    return {"user": user_entity(user)}
 
 
 @router.get("/users/me")
