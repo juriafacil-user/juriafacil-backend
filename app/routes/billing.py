@@ -10,7 +10,13 @@ router = APIRouter(prefix="/billing", tags=["Billing"])
 # =============================
 # ⚙️ CONFIGURAÇÃO MERCADO PAGO
 # =============================
-sdk = mercadopago.SDK(os.getenv("MERCADOPAGO_ACCESS_TOKEN"))
+token = os.getenv("MERCADOPAGO_ACCESS_TOKEN")
+if not token:
+    print("⚠️ AVISO: MERCADOPAGO_ACCESS_TOKEN não configurado. O módulo de pagamento não funcionará.")
+    token = "SEM_TOKEN"
+
+sdk = mercadopago.SDK(str(token))
+
 FREE_UPLOAD_LIMIT = 1  # limite de 1 upload gratuito
 
 # =============================
