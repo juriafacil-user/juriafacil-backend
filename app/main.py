@@ -7,6 +7,7 @@ app = FastAPI(title="API JuriFacil 🚀")
 app.include_router(users.router)
 app.include_router(auth.router)
 app.include_router(whatsapp.router)
+app.include_router(billing.router)
 
 @app.get("/")
 def root():
