@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from app.database import db
 from app.routes.auth import get_password_hash, get_current_user
+from app.schemas import UserCreate
 
 router = APIRouter()
 
