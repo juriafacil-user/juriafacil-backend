@@ -10,13 +10,19 @@ async def list_users():
 
 
 @router.post("/users/")
-async def create_user(user: dict):
-    existing_user = await db["users"].find_one({"email": user["email"]})
+async def create_user(user: UserCreate):
+    existing_user = await db["users"].find_one({"email": user.email})
     if existing_user:
         raise HTTPException(status_code=400, detail="E-mail já cadastrado")
 
-    user["password"] = get_password_hash(user["password"])
-    await db["users"].insert_one(user)
+    hashed_password = get_password_hash(user.password)
+    new_user = {
+        "name": user.name,
+        "email": user.email,
+        "password": hashed_password
+    }
+
+    await db["users"].insert_one(new_user)
     return {"message": "Usuário criado com sucesso!"}
 
 
