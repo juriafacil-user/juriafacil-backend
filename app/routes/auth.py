@@ -7,31 +7,43 @@ from app.database import db
 
 router = APIRouter()
 
-SECRET_KEY = "chave_super_secreta"  # ⚠️ troque isso por uma chave segura e coloque em variável de ambiente
+# ⚠️ Troque por variável de ambiente depois (segurança)
+SECRET_KEY = "chave_super_secreta"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
+# contexto de hash com bcrypt
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+# -------------------------------
+# Funções auxiliares
+# -------------------------------
 
+def verify_password(plain_password: str, hashed_password: str):
+    """Verifica a senha truncando a 72 caracteres (limite do bcrypt)."""
+    return pwd_context.verify(plain_password[:72], hashed_password)
 
-def get_password_hash(password):
-    return pwd_context.hash(password)
-
+def get_password_hash(password: str):
+    """Gera o hash truncando a 72 caracteres para evitar erro do bcrypt."""
+    return pwd_context.hash(password[:72])
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
+    """Cria token JWT com expiração."""
     to_encode = data.copy()
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
+# -------------------------------
+# Rotas
+# -------------------------------
+
 @router.post("/auth/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    """Autenticação: retorna JWT se o login for válido."""
     user = await db["users"].find_one({"email": form_data.username})
     if not user or not verify_password(form_data.password, user["password"]):
         raise HTTPException(status_code=401, detail="E-mail ou senha incorretos")
@@ -40,16 +52,22 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     return {"access_token": token, "token_type": "bearer"}
 
 
+# -------------------------------
+# Dependência de autenticação
+# -------------------------------
+
 async def get_current_user(token: str = Depends(oauth2_scheme)):
+    """Decodifica token JWT e retorna o usuário autenticado."""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
         if not email:
             raise HTTPException(status_code=401, detail="Token inválido")
+
         user = await db["users"].find_one({"email": email})
         if not user:
             raise HTTPException(status_code=401, detail="Usuário não encontrado")
+
         return user
     except JWTError:
         raise HTTPException(status_code=401, detail="Token inválido ou expirado")
-
