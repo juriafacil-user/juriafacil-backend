@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.routes import users, auth, whatsapp
+from app.routes import users, auth, whatsapp, billing
 
 app = FastAPI(title="API JuriFacil 🚀")
 
