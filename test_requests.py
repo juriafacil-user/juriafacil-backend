@@ -1,18 +1,17 @@
 import requests
 
-BASE_URL = "http://127.0.0.1:8000"
+BASE_URL = "https://juriafacil-backend.onrender.com/"
 
-# Criar usuário
-user_data = {"name": "Edu Ribeiro", "email": "edu@teste.com", "password": "123456"}
+# 1️⃣ Criar usuário
+user_data = {
+    "name": "Edu Ribeiro",
+    "email": "edu@teste.com",
+    "password": "123456"
+}
 print(requests.post(f"{BASE_URL}/users/", json=user_data).json())
 
-# Login
-token = requests.post(
-    f"{BASE_URL}/auth/token",
-    data={"username": "edu@teste.com", "password": "123456"},
-).json()
-print(token)
+# 2️⃣ Consultar plano
+print(requests.get(f"{BASE_URL}/billing/check-plan", headers={
+    "Authorization": "Bearer TOKEN_JWT"
+}).json())
 
-# Rota protegida
-headers = {"Authorization": f"Bearer {token['access_token']}"}
-print(requests.get(f"{BASE_URL}/users/me", headers=headers).json())
