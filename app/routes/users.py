@@ -4,6 +4,10 @@ from app.routes.auth import get_password_hash, get_current_user
 
 router = APIRouter()
 
+@router.get("/users/")
+async def list_users():
+    return {"message": "Endpoint de usuários ativo ✅"}
+
 
 @router.post("/users/")
 async def create_user(user: dict):
