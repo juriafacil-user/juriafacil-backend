@@ -57,17 +57,25 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 # -------------------------------
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
-    """Decodifica token JWT e retorna o usuário autenticado."""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
         if not email:
             raise HTTPException(status_code=401, detail="Token inválido")
-
         user = await db["users"].find_one({"email": email})
         if not user:
             raise HTTPException(status_code=401, detail="Usuário não encontrado")
 
+        # 🔍 Validação da assinatura
+        subscription = user.get("subscription", {})
+        if not subscription.get("active"):
+            raise HTTPException(status_code=403, detail="Assinatura inativa")
+
+        end_date = subscription.get("end_date")
+        if end_date and datetime.utcnow() > datetime.fromisoformat(end_date):
+            raise HTTPException(status_code=403, detail="Sua assinatura expirou. Renove para continuar.")
+
         return user
+
     except JWTError:
         raise HTTPException(status_code=401, detail="Token inválido ou expirado")
