@@ -1,22 +1,35 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from datetime import datetime, timedelta
 from app.utils.database import db
-from app.utils.user_helper import get_current_user
+from app.utils.user_helper import get_or_create_user
 import mercadopago
 import os
 
 router = APIRouter(prefix="/billing", tags=["Billing"])
 
+# =============================
+# ⚙️ CONFIGURAÇÃO MERCADO PAGO
+# =============================
+sdk = mercadopago.SDK(os.getenv("MERCADOPAGO_ACCESS_TOKEN"))
 FREE_UPLOAD_LIMIT = 1  # limite de 1 upload gratuito
 
+# =============================
+# 🔹 1. Verificar plano
+# =============================
 @router.get("/check-plan")
-async def check_plan(user: dict = Depends(get_current_user)):
-    user_data = await db.users.find_one({"email": user["email"]})
-    if not user_data:
-        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+async def check_plan(whatsapp: str = Query(...)):
+    """
+    Verifica o plano atual do usuário pelo número do WhatsApp.
+    Se o usuário não existir, ele é criado automaticamente.
+    """
+    user = await get_or_create_user(whatsapp)
+    plan = user.get("plan", {})
 
-    # Se for plano gratuito e já usou o upload gratuito
-    if user_data["plan"] == "free" and user_data["upload_count"] >= FREE_UPLOAD_LIMIT:
+    uploads = plan.get("uploads_this_month", 0)
+    limit = plan.get("max_uploads", FREE_UPLOAD_LIMIT)
+    plan_type = plan.get("type", "free")
+
+    if plan_type == "free" and uploads >= limit:
         return {
             "status": "limit_reached",
             "message": "Você já utilizou seu upload gratuito. Faça upgrade para o plano Premium."
@@ -24,35 +37,71 @@ async def check_plan(user: dict = Depends(get_current_user)):
 
     return {
         "status": "ok",
-        "plan": user_data["plan"],
-        "uploads": user_data["upload_count"]
+        "plan": plan_type,
+        "uploads": uploads,
+        "limit": limit
     }
 
+# =============================
+# 🔹 2. Registrar upload
+# =============================
 @router.post("/register-upload")
-async def register_upload(user: dict = Depends(get_current_user)):
-    await db.users.update_one(
-        {"email": user["email"]},
-        {"$inc": {"upload_count": 1}, "$set": {"last_upload": datetime.utcnow()}}
-    )
-    return {"message": "Upload registrado com sucesso"}
+async def register_upload(whatsapp: str = Query(...)):
+    """
+    Incrementa o número de uploads feitos no mês.
+    """
+    user = await get_or_create_user(whatsapp)
+    plan = user.get("plan", {})
 
-@router.post("/upgrade")
-async def upgrade_to_premium(user: dict = Depends(get_current_user)):
-    new_expiration = datetime.utcnow() + timedelta(days=30)
-    await db.users.update_one(
-        {"email": user["email"]},
-        {"$set": {"plan": "premium", "plan_expiration": new_expiration}}
+    new_uploads = plan.get("uploads_this_month", 0) + 1
+
+    await db["users"].update_one(
+        {"whatsapp": whatsapp},
+        {"$set": {"plan.uploads_this_month": new_uploads}}
     )
+
     return {
-        "message": "Plano Premium ativado com sucesso!",
-        "expires_in": new_expiration
+        "message": "Upload registrado com sucesso",
+        "uploads": new_uploads
     }
 
+# =============================
+# 🔹 3. Upgrade manual / webhook
+# =============================
+@router.post("/upgrade")
+async def upgrade_to_premium(whatsapp: str = Query(...)):
+    """
+    Atualiza o plano para Premium (manual ou via callback do Mercado Pago).
+    """
+    new_plan = {
+        "type": "premium",
+        "active": True,
+        "start_date": datetime.utcnow().isoformat(),
+        "end_date": (datetime.utcnow() + timedelta(days=30)).isoformat(),
+        "uploads_this_month": 0,
+        "max_uploads": 999
+    }
 
-# Isso gera o link automático de pagamento da assinatura.
-sdk = mercadopago.SDK(os.getenv("MERCADOPAGO_ACCESS_TOKEN"))
+    result = await db["users"].update_one(
+        {"whatsapp": whatsapp},
+        {"$set": {"plan": new_plan}}
+    )
+
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+    return {"message": "Plano Premium ativado com sucesso!", "plan": new_plan}
+
+# =============================
+# 🔹 4. Criar link de assinatura Mercado Pago
+# =============================
 @router.post("/create-subscription")
-async def create_subscription(user: dict = Depends(get_current_user)):
+async def create_subscription(whatsapp: str = Query(...)):
+    """
+    Cria o link de pagamento da assinatura Premium.
+    """
+    user = await get_or_create_user(whatsapp)
+
     preference_data = {
         "items": [
             {
@@ -62,7 +111,8 @@ async def create_subscription(user: dict = Depends(get_current_user)):
             }
         ],
         "payer": {
-            "email": user["email"]
+            "name": user["name"],
+            "email": user.get("email") or "sememail@juriafacil.com",
         },
         "back_urls": {
             "success": "https://juriafacil.com/sucesso",
