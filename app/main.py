@@ -6,6 +6,7 @@ app = FastAPI(title="API JuriFacil 🚀")
 # Registrar rotas
 app.include_router(users.router)
 app.include_router(auth.router)
+app.include_router(whatsapp.router)
 
 @app.get("/")
 def root():
