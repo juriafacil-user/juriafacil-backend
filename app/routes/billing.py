@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from datetime import datetime, timedelta
 from app.utils.database import db
 from app.utils.user_helper import get_or_create_user
 import mercadopago
 import os
+import json
 
 router = APIRouter(prefix="/billing", tags=["Billing"])
 
@@ -147,3 +148,17 @@ async def create_subscription(whatsapp: str = Query(...)):
         )
     
     return {"init_point": init_point}
+
+# =============================
+# 🔹 5. Cirar Rota do webhook
+# =============================
+@router.post("/webhook")
+async def mercadopago_webhook(request: Request):
+    try:
+        body = await request.body()
+        data = json.loads(body)
+        print("🔔 Webhook recebido:", data)
+        return {"status": "received"}
+    except Exception as e:
+        print("Erro no webhook:", e)
+        return {"error": str(e)}
