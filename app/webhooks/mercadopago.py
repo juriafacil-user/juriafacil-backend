@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Request, HTTPException
 import httpx
 import os
-import mercadopago
 from app.utils.database import db  # conexão MongoDB
 
 router = APIRouter()
@@ -18,7 +17,7 @@ if not MERCADO_PAGO_ACCESS_TOKEN:
 
 @router.post("/webhook/mercadopago")
 async def mercadopago_webhook(request: Request):
-    # 🔒 Validação opcional da assinatura secreta (se configurada no painel do Mercado Pago)
+    # 🔒 Validação opcional da assinatura secreta
     if WEBHOOK_SECRET:
         signature = request.headers.get("x-signature")
         if signature != WEBHOOK_SECRET:
@@ -49,15 +48,14 @@ async def mercadopago_webhook(request: Request):
         if not payer_email:
             return {"status": "ignored", "reason": "no payer email"}
 
-        # ✅ Atualiza o plano no banco
-        result = await db["users"].update_one(
-            {"email": payer_email},
-            {"$set": {"plano": "premium"}}
-        )
+        # 🚀 Chama internamente o endpoint de upgrade
+        async with httpx.AsyncClient() as client:
+            upgrade_resp = await client.post(
+                "https://juriafacil.onrender.com/billing/upgrade",
+                json={"email": payer_email}
+            )
 
-        if result.modified_count > 0:
-            print(f"✅ Plano premium ativado para {payer_email}")
-        else:
-            print(f"⚠️ Usuário não encontrado: {payer_email}")
+        print("📤 Resposta do upgrade:", upgrade_resp.text)
+        return {"status": "success", "email": payer_email}
 
-    return {"status": "ok"}
+    return {"status": "ok", "reason": "payment not approved"}
