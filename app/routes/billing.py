@@ -148,17 +148,3 @@ async def create_subscription(whatsapp: str = Query(...)):
         )
     
     return {"init_point": init_point}
-
-# =============================
-# 🔹 5. Cirar Rota do webhook
-# =============================
-@router.post("/webhook")
-async def mercadopago_webhook(request: Request):
-    try:
-        body = await request.body()
-        data = json.loads(body)
-        print("🔔 Webhook recebido:", data)
-        return {"status": "received"}
-    except Exception as e:
-        print("Erro no webhook:", e)
-        return {"error": str(e)}
