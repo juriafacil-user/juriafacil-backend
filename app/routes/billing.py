@@ -120,10 +120,8 @@ async def create_subscription(whatsapp: str = Query(...)):
         ],
         "purpose": "wallet_purchase",
         "payer": {
-        #    "name": user["name"],
-        #    "email": user.get("email") or "TESTUSER4860729199332912102",
-            "name": "Test User",
-            "email": "fake_user@test.com",
+            "name": user["name"],
+            "email": user.get("email") or "teste@gmail.com",
             "identification": {
                 "type": "CPF",
                 "number": "12345678909"
@@ -136,9 +134,6 @@ async def create_subscription(whatsapp: str = Query(...)):
             "success": "https://juriafacil.com/sucesso",
             "failure": "https://juriafacil.com/erro",
             "pending": "https://juriafacil.com/pendente"
-        },
-        "payment_methods": {
-            "installments": 1
         },
         "auto_return": "approved"
     }
