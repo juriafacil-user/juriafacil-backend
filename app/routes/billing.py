@@ -120,7 +120,7 @@ async def create_subscription(whatsapp: str = Query(...)):
         ],
         "payer": {
             "name": user["name"],
-            "email": user.get("email") or "sememail@juriafacil.com",
+            "email": user.get("email") or "TESTUSER4860729199332912102",
         },
         "metadata": {
             "whatsapp": whatsapp
