@@ -16,7 +16,9 @@ if not token:
 
 MERCADO_PAGO_ACCESS_TOKEN = mercadopago.SDK(str(token))
 
- 
+signature = request.headers.get("x-signature")
+if signature != os.getenv("MERCADOPAGO_WEBHOOK_SECRET"):
+    return {"status": "unauthorized"} 
 
 @router.post("/webhook/mercadopago")
 async def mercadopago_webhook(request: Request):
