@@ -5,7 +5,17 @@ from app.utils.database import db  # conexão MongoDB
 
 router = APIRouter()
 
-MERCADO_PAGO_ACCESS_TOKEN = os.getenv("MERCADO_PAGO_ACCESS_TOKEN")
+# =============================
+# ⚙️ CONFIGURAÇÃO MERCADO PAGO
+# =============================
+token = os.getenv("MERCADOPAGO_ACCESS_TOKEN")
+if not token:
+    print("⚠️ AVISO: MERCADOPAGO_ACCESS_TOKEN não configurado. O módulo de pagamento não funcionará.")
+    token = "SEM_TOKEN"
+
+MERCADO_PAGO_ACCESS_TOKEN = mercadopago.SDK(str(token))
+
+ 
 
 @router.post("/webhook/mercadopago")
 async def mercadopago_webhook(request: Request):
