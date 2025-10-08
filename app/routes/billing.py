@@ -135,8 +135,8 @@ async def create_subscription(whatsapp: str = Query(...)):
  
     
     preference_response = sdk.preference().create(preference_data)
-   # return {"init_point": preference_response["response"]["init_point"]}
-   response = preference_response["response"]
+    # return {"init_point": preference_response["response"]["init_point"]}
+    response = preference_response["response"]
     
     # 🔍 Ajusta o link para sandbox, se estiver usando token de teste
     init_point = response.get("init_point", "")
