@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from app.database import db
+from app.utils.database import db
 
 async def get_or_create_user(whatsapp_number: str, name: str = None):
     """
