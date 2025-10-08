@@ -115,14 +115,14 @@ async def create_subscription(whatsapp: str = Query(...)):
             {
                 "title": "Assinatura JuriFácil Premium",
                 "quantity": 1,
-                "unit_price": 29.90
+                "unit_price": 9.90
             }
         ],
         "payer": {
         #    "name": user["name"],
         #    "email": user.get("email") or "TESTUSER4860729199332912102",
             "name": "Test User",
-            "email": user.get("email") or "TESTUSER4860729199332912102",
+            "email": user.get("email") or "TESTUSER4860729199332912102@testuser.com",
             "identification": {
                 "type": "CPF",
                 "number": "12345678909"
@@ -135,6 +135,9 @@ async def create_subscription(whatsapp: str = Query(...)):
             "success": "https://juriafacil.com/sucesso",
             "failure": "https://juriafacil.com/erro",
             "pending": "https://juriafacil.com/pendente"
+        },
+        "payment_methods": {
+            "installments": 1
         },
         "auto_return": "approved"
     }
