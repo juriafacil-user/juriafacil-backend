@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request
 import httpx
 import os
+import mercadopago
 from app.utils.database import db  # conexão MongoDB
 
 router = APIRouter()
