@@ -11,3 +11,4 @@ passlib[bcrypt]==1.7.4
 python-jose[cryptography]
 python-multipart
 mercadopago==2.2.3
+httpx
