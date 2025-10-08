@@ -132,7 +132,18 @@ async def create_subscription(whatsapp: str = Query(...)):
         "auto_return": "approved"
     }
     
-    preference_data["sandbox_init_point"] = True  # TESTE 
+ 
     
     preference_response = sdk.preference().create(preference_data)
-    return {"init_point": preference_response["response"]["init_point"]}
+   # return {"init_point": preference_response["response"]["init_point"]}
+   response = preference_response["response"]
+    
+    # 🔍 Ajusta o link para sandbox, se estiver usando token de teste
+    init_point = response.get("init_point", "")
+    if "TEST-" in token and "sandbox." not in init_point:
+        init_point = init_point.replace(
+            "https://www.mercadopago.com.br/",
+            "https://sandbox.mercadopago.com.br/"
+        )
+    
+    return {"init_point": init_point}
