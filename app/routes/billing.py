@@ -118,7 +118,6 @@ async def create_subscription(whatsapp: str = Query(...)):
                 "unit_price": 9.90
             }
         ],
-        "purpose": "wallet_purchase",
         "payer": {
             "name": user["name"],
             "email": user.get("email") or "teste@gmail.com",
