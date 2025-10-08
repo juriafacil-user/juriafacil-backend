@@ -16,6 +16,7 @@ if not token:
     token = "SEM_TOKEN"
 
 sdk = mercadopago.SDK(str(token))
+sdk.configure({"sandbox": True}) #TESTE
 
 FREE_UPLOAD_LIMIT = 1  # limite de 1 upload gratuito
 
@@ -107,7 +108,7 @@ async def create_subscription(whatsapp: str = Query(...)):
     Cria o link de pagamento da assinatura Premium.
     """
     user = await get_or_create_user(whatsapp)
-
+    
     preference_data = {
         "items": [
             {
@@ -130,6 +131,8 @@ async def create_subscription(whatsapp: str = Query(...)):
         },
         "auto_return": "approved"
     }
-
+    
+    preference_data["sandbox_init_point"] = True  # TESTE 
+    
     preference_response = sdk.preference().create(preference_data)
     return {"init_point": preference_response["response"]["init_point"]}
