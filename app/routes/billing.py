@@ -141,10 +141,7 @@ async def create_subscription(whatsapp: str = Query(...)):
     
     # 🔍 Ajusta o link para sandbox, se estiver usando token de teste
     init_point = response.get("init_point", "")
-    #APENAS DEBUG
-    print("PREFERENCE RESPONSE (id):", response.get("id"))
-    print("INIT_POINT (raw):", init_point)
-    #FIM DEBUG
+   
     if "TEST-" in token and "sandbox." not in init_point:
         init_point = init_point.replace(
             "https://www.mercadopago.com.br/",
