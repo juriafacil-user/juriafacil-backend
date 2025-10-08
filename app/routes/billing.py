@@ -16,7 +16,7 @@ if not token:
     token = "SEM_TOKEN"
 
 sdk = mercadopago.SDK(str(token))
-sdk.configure({"sandbox": True}) #TESTE
+
 
 FREE_UPLOAD_LIMIT = 1  # limite de 1 upload gratuito
 
