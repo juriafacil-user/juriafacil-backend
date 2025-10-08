@@ -120,6 +120,9 @@ async def create_subscription(whatsapp: str = Query(...)):
             "name": user["name"],
             "email": user.get("email") or "sememail@juriafacil.com",
         },
+        "metadata": {
+            "whatsapp": whatsapp
+        },
         "back_urls": {
             "success": "https://juriafacil.com/sucesso",
             "failure": "https://juriafacil.com/erro",
