@@ -18,8 +18,6 @@ if not token:
 
 sdk = mercadopago.SDK(str(token))
 
-# perto do topo do arquivo (após token = ...)
-print("USANDO MERCADOPAGO_ACCESS_TOKEN:", token)   # apenas debug
 
 FREE_UPLOAD_LIMIT = 1  # limite de 1 upload gratuito
 
