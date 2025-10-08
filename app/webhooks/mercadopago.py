@@ -15,10 +15,10 @@ if not MERCADO_PAGO_ACCESS_TOKEN:
 @router.post("/webhook/mercadopago")
 async def mercadopago_webhook(request: Request):
     # 🔒 Validação opcional da assinatura secreta
-    if WEBHOOK_SECRET:
-        signature = request.headers.get("x-signature")
-        if signature != WEBHOOK_SECRET:
-            raise HTTPException(status_code=401, detail="Assinatura inválida")
+    #if WEBHOOK_SECRET:
+     #   signature = request.headers.get("x-signature")
+      #  if signature != WEBHOOK_SECRET:
+       #     raise HTTPException(status_code=401, detail="Assinatura inválida")
 
     body = await request.json()
     print("📩 Webhook recebido:", body)
