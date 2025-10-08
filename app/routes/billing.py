@@ -123,7 +123,7 @@ async def create_subscription(whatsapp: str = Query(...)):
         #    "name": user["name"],
         #    "email": user.get("email") or "TESTUSER4860729199332912102",
             "name": "Test User",
-            "email": user.get("email") or "TESTUSER4860729199332912102@testuser.com",
+            "email": "fake_user@test.com",
             "identification": {
                 "type": "CPF",
                 "number": "12345678909"
