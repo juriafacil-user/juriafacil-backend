@@ -5,9 +5,6 @@ from app.utils.database import db  # conexão MongoDB
 
 router = APIRouter()
 
-# =============================
-# ⚙️ CONFIGURAÇÃO MERCADO PAGO
-# =============================
 MERCADO_PAGO_ACCESS_TOKEN = os.getenv("MERCADOPAGO_ACCESS_TOKEN")
 WEBHOOK_SECRET = os.getenv("MERCADOPAGO_WEBHOOK_SECRET")
 
@@ -41,21 +38,21 @@ async def mercadopago_webhook(request: Request):
     payment_data = response.json()
     print("🔍 Dados do pagamento:", payment_data)
 
-    # 💳 Se o pagamento foi aprovado
     if payment_data.get("status") == "approved":
-        payer_email = payment_data["payer"].get("email")
+        # 🧠 Recupera o WhatsApp enviado nos metadados
+        metadata = payment_data.get("metadata", {})
+        whatsapp = metadata.get("whatsapp")
 
-        if not payer_email:
-            return {"status": "ignored", "reason": "no payer email"}
+        if not whatsapp:
+            print("⚠️ Nenhum WhatsApp encontrado no pagamento. Não foi possível fazer upgrade.")
+            return {"status": "ignored", "reason": "no whatsapp metadata"}
 
-        # 🚀 Chama internamente o endpoint de upgrade
+        # 🚀 Faz o upgrade chamando a rota existente
         async with httpx.AsyncClient() as client:
-            upgrade_resp = await client.post(
-                "https://juriafacil.onrender.com/billing/upgrade",
-                json={"email": payer_email}
-            )
+            upgrade_url = f"https://juriafacil.onrender.com/billing/upgrade?whatsapp={whatsapp}"
+            upgrade_resp = await client.post(upgrade_url)
 
-        print("📤 Resposta do upgrade:", upgrade_resp.text)
-        return {"status": "success", "email": payer_email}
+        print(f"✅ Upgrade feito para {whatsapp} - Resposta:", upgrade_resp.text)
+        return {"status": "success", "whatsapp": whatsapp}
 
     return {"status": "ok", "reason": "payment not approved"}
