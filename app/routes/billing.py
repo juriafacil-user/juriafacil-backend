@@ -115,7 +115,7 @@ async def create_subscription(whatsapp: str = Query(...)):
             {
                 "title": "Assinatura JuriFácil Premium",
                 "quantity": 1,
-                "unit_price": 9.90
+                "unit_price": 1.00
             }
         ],
         "payer": {
