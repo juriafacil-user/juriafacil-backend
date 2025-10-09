@@ -49,7 +49,7 @@ async def mercadopago_webhook(request: Request):
 
         # 🚀 Faz o upgrade chamando a rota existente
         async with httpx.AsyncClient() as client:
-            upgrade_url = f"https://juriafacil.onrender.com/billing/upgrade?whatsapp={whatsapp}"
+            upgrade_url = f"https://juriafacil-backend.onrender.com//billing/upgrade?whatsapp={whatsapp}"
             upgrade_resp = await client.post(upgrade_url)
 
         print(f"✅ Upgrade feito para {whatsapp} - Resposta:", upgrade_resp.text)
