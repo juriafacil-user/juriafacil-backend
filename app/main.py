@@ -9,7 +9,7 @@ app.include_router(users.router)
 app.include_router(auth.router)
 app.include_router(whatsapp.router)
 app.include_router(billing.router)
-app.include_router(mercadopago.router)
+app.include_router(mercadopago.router, prefix="/webhook", tags=["MercadoPago"])
 
 @app.get("/")
 def root():
