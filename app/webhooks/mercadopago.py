@@ -12,7 +12,7 @@ if not MERCADO_PAGO_ACCESS_TOKEN:
     print("⚠️ AVISO: MERCADOPAGO_ACCESS_TOKEN não configurado. O módulo de pagamento não funcionará.")
 
 
-@router.post("/webhook/mercadopago")
+@router.post("/mercadopago")
 async def mercadopago_webhook(request: Request):
     # 🔒 Validação opcional da assinatura secreta
     #if WEBHOOK_SECRET:
