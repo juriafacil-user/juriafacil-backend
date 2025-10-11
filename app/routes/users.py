@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Depends, Query
 from bson import ObjectId
 from datetime import datetime
 from app.utils.database import db
+from app.utils.user_helper import get_or_create_user
 from app.models import user_entity, users_entity, UserModel
 from app.schemas import UserCreateWhatsApp, UserUpdate
 from typing import Optional
