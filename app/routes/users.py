@@ -32,20 +32,9 @@ async def create_user(data: UserCreateWhatsApp):
     if exists:
         raise HTTPException(status_code=409, detail="WhatsApp já cadastrado")
 
-    now = datetime.utcnow()
-    doc = {
-        "name": data.name or "Usuário WhatsApp",
-        "email": data.email,
-        "whatsapp": whatsapp,
-        "status": "active",
-        "created_at": now.isoformat(),
-        "updated_at": now.isoformat(),
-        "usage": {"uploads_this_month": 0, "uploads_total": 0},
-        "subscription": None,  # será anexado após escolher/atribuir um plano
-    }
-    res = await db.users.insert_one(doc)
-    user = await db.users.find_one({"_id": res.inserted_id})
-    return {"user": user_entity(user)}
+    # usa helper para criar já com plano free
+    new_user = await get_or_create_user(whatsapp_number=whatsapp, name=data.name or "Usuário WhatsApp")
+    return {"user": user_entity(new_user)}
 
 # 🟧 Atualizar dados básicos
 @router.patch("/{id}")
