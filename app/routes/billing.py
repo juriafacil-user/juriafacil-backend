@@ -14,141 +14,79 @@ router = APIRouter(prefix="/billing", tags=["Billing"])
 token = os.getenv("MERCADOPAGO_ACCESS_TOKEN")
 if not token:
     print("⚠️ AVISO: MERCADOPAGO_ACCESS_TOKEN não configurado. O módulo de pagamento não funcionará.")
-    token = "SEM_TOKEN"
+sdk = mercadopago.SDK(token) if token else None
 
-sdk = mercadopago.SDK(str(token))
+# 🔹 Listar planos ativos
+@router.get("/plans")
+async def list_plans():
+    plans = await db.plans.find({"active": True}).to_list(100)
+    return {"plans": [{
+        "id": str(p["_id"]),
+        "code": p["code"],
+        "name": p["name"],
+        "price": p["price"],
+        "currency": p.get("currency", "BRL"),
+        "period_months": p.get("period_months", 1),
+        "max_uploads_per_month": p.get("max_uploads_per_month", 1),
+        "features": p.get("features", []),
+        "active": p.get("active", True),
+    } for p in plans]}
 
+# 🔹 Criar preferência de pagamento (inclui whatsapp nos metadados)
+@router.post("/checkout")
+async def create_checkout(whatsapp: str = Query(...), plan_code: str = Query("premium")):
+    if not sdk:
+        raise HTTPException(status_code=500, detail="Mercado Pago não configurado")
+    user = await get_or_create_user(whatsapp_number=whatsapp)
 
-FREE_UPLOAD_LIMIT = 1  # limite de 1 upload gratuito
+    plan = await db.plans.find_one({"code": plan_code, "active": True})
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plano não encontrado")
 
-# =============================
-# 🔹 1. Verificar plano
-# =============================
-@router.get("/check-plan")
-async def check_plan(whatsapp: str = Query(...)):
-    """
-    Verifica o plano atual do usuário pelo número do WhatsApp.
-    Se o usuário não existir, ele é criado automaticamente.
-    """
-    user = await get_or_create_user(whatsapp)
-    plan = user.get("plan", {})
+    price = float(plan.get("price", 0))
+    title = f"Assinatura {plan.get('name','Plano')} JuriFácil"
 
-    uploads = plan.get("uploads_this_month", 0)
-    limit = plan.get("max_uploads", FREE_UPLOAD_LIMIT)
-    plan_type = plan.get("type", "free")
-
-    if plan_type == "free" and uploads >= limit:
-        return {
-            "status": "limit_reached",
-            "message": "Você já utilizou seu upload gratuito. Faça upgrade para o plano Premium."
-        }
-
-    return {
-        "status": "ok",
-        "plan": plan_type,
-        "uploads": uploads,
-        "limit": limit
+    preference_data = {
+        "items": [{"title": title, "quantity": 1, "unit_price": price}],
+        "metadata": {"whatsapp": user["whatsapp"], "plan_code": plan_code},
+        "payer": {"first_name": user.get("name") or "Usuário WhatsApp"},
+        "back_urls": {
+            "success": os.getenv("CHECKOUT_SUCCESS_URL", "https://juriafacil.com/sucesso"),
+            "failure": os.getenv("CHECKOUT_FAILURE_URL", "https://juriafacil.com/erro"),
+            "pending": os.getenv("CHECKOUT_PENDING_URL", "https://juriafacil.com/pendente"),
+        },
+        "auto_return": "approved",
     }
+    preference_response = sdk.preference().create(preference_data)
+    response = preference_response["response"]
+    init_point = response.get("init_point", "")
+    if "TEST-" in (os.getenv("MERCADOPAGO_ACCESS_TOKEN") or "") and "sandbox." not in init_point:
+        init_point = init_point.replace("https://www.mercadopago.com.br/", "https://sandbox.mercadopago.com.br/")
+    return {"init_point": init_point}
 
-# =============================
-# 🔹 2. Registrar upload
-# =============================
-@router.post("/register-upload")
-async def register_upload(whatsapp: str = Query(...)):
-    """
-    Incrementa o número de uploads feitos no mês.
-    """
-    user = await get_or_create_user(whatsapp)
-    plan = user.get("plan", {})
-
-    new_uploads = plan.get("uploads_this_month", 0) + 1
-
-    await db["users"].update_one(
-        {"whatsapp": whatsapp},
-        {"$set": {"plan.uploads_this_month": new_uploads}}
-    )
-
-    return {
-        "message": "Upload registrado com sucesso",
-        "uploads": new_uploads
-    }
-
-# =============================
-# 🔹 3. Upgrade manual / webhook
-# =============================
+# 🔹 Upgrade de plano manual (ex: fallback do webhook)
 @router.post("/upgrade")
-async def upgrade_to_premium(whatsapp: str = Query(...)):
-    """
-    Atualiza o plano para Premium (manual ou via callback do Mercado Pago).
-    """
-    new_plan = {
-        "type": "premium",
-        "active": True,
-        "start_date": datetime.utcnow().isoformat(),
-        "end_date": (datetime.utcnow() + timedelta(days=30)).isoformat(),
-        "uploads_this_month": 0,
-        "max_uploads": 999
-    }
-
-    result = await db["users"].update_one(
-        {"whatsapp": whatsapp},
-        {"$set": {"plan": new_plan}}
-    )
-
-    if result.modified_count == 0:
+async def upgrade(whatsapp: str = Query(...), plan_code: str = Query("premium")):
+    user = await db.users.find_one({"whatsapp": "".join(c for c in whatsapp if c.isdigit())})
+    if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
 
-    return {"message": "Plano Premium ativado com sucesso!", "plan": new_plan}
+    plan = await db.plans.find_one({"code": plan_code, "active": True})
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plano não encontrado")
 
-# =============================
-# 🔹 4. Criar link de assinatura Mercado Pago
-# =============================
-@router.post("/create-subscription")
-async def create_subscription(whatsapp: str = Query(...)):
-    """
-    Cria o link de pagamento da assinatura Premium.
-    """
-    user = await get_or_create_user(whatsapp)
-    
-    preference_data = {
-        "items": [
-            {
-                "title": "Assinatura JuriFácil Premium",
-                "quantity": 1,
-                "unit_price": 1.00
-            }
-        ],
-        "payer": {
-            "name": user["name"],
-            "email": user.get("email") or "teste@gmail.com",
-            "identification": {
-                "type": "CPF",
-                "number": "12345678909"
-            }
-        },
-        "metadata": {
-            "whatsapp": whatsapp
-        },
-        "back_urls": {
-            "success": "https://juriafacil.com/sucesso",
-            "failure": "https://juriafacil.com/erro",
-            "pending": "https://juriafacil.com/pendente"
-        },
-        "auto_return": "approved"
+    start = datetime.utcnow()
+    end = start + timedelta(days=30 * plan.get("period_months", 1))
+    subscription = {
+        "plan_id": str(plan["_id"]),
+        "plan_code": plan["code"],
+        "plan_name": plan["name"],
+        "active": True,
+        "start_date": start.isoformat(),
+        "end_date": end.isoformat(),
+        "renewal_day": start.day,
+        "last_renewal": start.isoformat(),
+        "next_renewal": end.isoformat(),
     }
-    
- 
-    
-    preference_response = sdk.preference().create(preference_data)
-    # return {"init_point": preference_response["response"]["init_point"]}
-    response = preference_response["response"]
-    
-    # 🔍 Ajusta o link para sandbox, se estiver usando token de teste
-    init_point = response.get("init_point", "")
-    if "TEST-" in token and "sandbox." not in init_point:
-        init_point = init_point.replace(
-            "https://www.mercadopago.com.br/",
-            "https://sandbox.mercadopago.com.br/"
-        )
-    
-    return {"init_point": init_point}
+    await db.users.update_one({"_id": user["_id"]}, {"$set": {"subscription": subscription}})
+    return {"status": "ok", "subscription": subscription}
